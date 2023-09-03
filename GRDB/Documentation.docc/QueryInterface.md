@@ -37,6 +37,7 @@ For an overview, see [Records](https://github.com/groue/GRDB.swift/blob/master/R
 - ``DerivableRequest``
 - ``SQLExpressible``
 - ``SQLSpecificExpressible``
+- ``SQLJSONExpressible``
 - ``SQLOrderingTerm``
 - ``SQLSelectable``
 - ``SQLSubqueryable``

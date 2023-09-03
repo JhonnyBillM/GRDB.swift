@@ -90,6 +90,7 @@ let players: [Player] = try dbQueue.read { db in
 
 - <doc:QueryInterface>
 - <doc:RecordRecommendedPractices>
+- <doc:JSONExpressions>
 - <doc:RecordTimestamps>
 - <doc:SingleRowTables>
 
