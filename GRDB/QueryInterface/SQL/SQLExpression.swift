@@ -1739,6 +1739,9 @@ extension SQLExpression {
 public protocol SQLExpressible {
     /// Returns an SQL expression.
     var sqlExpression: SQLExpression { get }
+    
+    /// Returns an SQL expression that evaluates to a JSON object.
+    var sqlJSONExpression: SQLJSONExpression { get }
 }
 
 extension SQLExpressible where Self == Column {

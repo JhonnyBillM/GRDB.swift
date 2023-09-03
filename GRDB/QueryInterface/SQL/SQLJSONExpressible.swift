@@ -1,7 +1,73 @@
 // SQLite 3.37.2 (opt-in) 3.38.0 (opt-out)
+/// A type that can be used as a JSON SQL expression.
+///
+/// See <doc:JSONExpressions>.
+/// 
+/// Related SQLite documentation <https://www.sqlite.org/json1.html>.
 public protocol SQLJSONExpressible: SQLSpecificExpressible {
-    var sqlJSONExpression: SQLJSONExpression { get }
+    /// Returns the number of elements in the JSON array, or 0 if the
+    /// expression is some kind of JSON value other than an array.
+    ///
+    /// Related SQLite documentation <https://www.sqlite.org/json1.html#the_json_array_length_function>
     var count: SQLExpression { get }
+    
+    /// Returns a minified version of that JSON expression (with all
+    /// unnecessary whitespace removed).
+    ///
+    /// Use this property when you want SQLite to parse and minify JSON
+    /// columns, for example. Compare:
+    ///
+    /// ```swift
+    /// let column = JSONColumn("detailsJSON")
+    ///
+    /// // Not minified
+    /// // SQL> SELECT detailsJSON FROM player WHERE id = 1
+    /// let rawDetails = Player
+    ///     .filter(id: 1)
+    ///     .select(column, as: String.self)
+    ///     .fetchOne(db)
+    ///
+    /// // Minified
+    /// // SQL> SELECT JSON(detailsJSON) FROM player WHERE id = 1
+    /// let rawDetails = Player
+    ///     .filter(id: 1)
+    ///     .select(column.minifiedJSON, as: String.self)
+    ///     .fetchOne(db)
+    /// ```
+    var minifiedJSON: SQLJSONExpression { get }
+    
+    // SQLite 3.38.0
+    /// Returns an SQL string, integer, double, or NULL value that
+    /// represents the selected subcomponent.
+    ///
+    /// For example:
+    ///
+    /// ```swift
+    /// let expression = """
+    ///     {"a":"xyz"}
+    ///     """.sqlJSONExpression
+    /// let value = expression[valueAtPath: "$.a"]
+    /// let string = try SQLRequest<String>("SELECT \(expression)").fetchOne(db)
+    /// // Prints "xyz" (quotes not included)
+    /// print(string)
+    /// ```
+    subscript(valueAtPath path: SQLExpressible) -> SQLExpression { get }
+    
+    // SQLite 3.38.0
+    /// Returns a JSON representation of the selected subcomponent.
+    ///
+    /// For example:
+    ///
+    /// ```swift
+    /// let expression = """
+    ///     {"a":"xyz"}
+    ///     """.sqlJSONExpression
+    /// let value = expression["$.a"]
+    /// let string = try SQLRequest<String>("SELECT \(expression)").fetchOne(db)
+    /// // Prints "xyz" (quotes included)
+    /// print(string)
+    /// ```
+    subscript(_ path: SQLExpressible) -> SQLJSONExpression { get }
 }
 
 extension SQLJSONExpressible {
@@ -16,17 +82,23 @@ extension SQLJSONExpressible {
     public var sqlExpression: SQLExpression {
         sqlJSONExpression.sqlExpression
     }
+    
+    public var count: SQLExpression {
+        sqlJSONExpression.count
+    }
+    
+    public var minifiedJSON: SQLJSONExpression {
+        sqlJSONExpression.minifiedJSON
+    }
 }
 
 extension SQLJSONExpressible {
-    // SQLite 3.38.0
-    public subscript(value path: SQLExpressible) -> SQLExpression {
-        sqlJSONExpression.jsonSubcomponentValue(atPath: path)
+    public subscript(valueAtPath path: SQLExpressible) -> SQLExpression {
+        sqlJSONExpression[valueAtPath: path]
     }
     
-    // SQLite 3.38.0
-    public subscript(json path: SQLExpressible) -> SQLJSONExpression {
-        sqlJSONExpression.jsonSubcomponent(atPath: path)
+    public subscript(_ path: SQLExpressible) -> SQLJSONExpression {
+        sqlJSONExpression[path]
     }
 }
 
@@ -36,15 +108,15 @@ extension SQLJSONExpressible {
 public struct JSONColumn {
     public var name: String
     
-    /// Creates a `Column` given its name.
+    /// Creates a `JSONColumn` given its name.
     ///
-    /// The name should be unqualified, such as `"score"`. Qualified name such
-    /// as `"player.score"` are unsupported.
+    /// The name should be unqualified, such as `"detailsJSON"`. Qualified
+    /// name such as `"player.detailsJSON"` are unsupported.
     public init(_ name: String) {
         self.name = name
     }
     
-    /// Creates a `Column` given a `CodingKey`.
+    /// Creates a `JSONColumn` given a `CodingKey`.
     public init(_ codingKey: some CodingKey) {
         self.name = codingKey.stringValue
     }
@@ -52,7 +124,6 @@ public struct JSONColumn {
 
 extension JSONColumn: SQLExpressible {
     public var sqlExpression: SQLExpression {
-        // make sure we return a JSON object
         .function("JSON", [.column(name)])
     }
 }
@@ -61,11 +132,7 @@ extension JSONColumn: ColumnExpression { }
 
 extension JSONColumn: SQLJSONExpressible {
     public var sqlJSONExpression: SQLJSONExpression {
-        .raw(.column(name))
-    }
-    
-    public var count: SQLExpression {
-        return .function("JSON_ARRAY_LENGTH", [.column(name)])
+        .unparsed(.column(name))
     }
 }
 
@@ -79,54 +146,29 @@ public struct SQLJSONExpression {
         case jsonObject(SQLExpression)
         
         /// An expression that may not be understood as an actual JSON object.
-        case raw(SQLExpression)
+        case unparsed(SQLExpression)
     }
+    
     private var impl: Impl
     
     private init(impl: Impl) {
         self.impl = impl
     }
     
-    public var count: SQLExpression {
-        switch impl {
-        case .jsonObject(let expression),
-             .raw(let expression):
-            return .function("JSON_ARRAY_LENGTH", [expression])
-        }
-    }
-    
     static func jsonObject(_ expression: SQLExpression) -> Self {
         .init(impl: .jsonObject(expression))
     }
     
-    static func raw(_ expression: SQLExpression) -> Self {
-        .init(impl: .raw(expression))
-    }
-    
-    // SQLite 3.38.0
-    func jsonSubcomponentValue(atPath path: SQLExpressible) -> SQLExpression {
-        switch impl {
-        case .jsonObject(let expression),
-            .raw(let expression):
-            return .binary(.jsonSubcomponentValue, expression, path.sqlExpression)
-        }
-    }
-    
-    // SQLite 3.38.0
-    func jsonSubcomponent(atPath path: SQLExpressible) -> SQLJSONExpression {
-        switch impl {
-        case .jsonObject(let expression),
-             .raw(let expression):
-            return .jsonObject(.binary(.jsonSubcomponent, expression, path.sqlExpression))
-        }
+    static func unparsed(_ expression: SQLExpression) -> Self {
+        .init(impl: .unparsed(expression))
     }
     
     func qualified(with alias: TableAlias) -> SQLJSONExpression {
         switch impl {
         case .jsonObject(let expression):
             return .jsonObject(expression.qualified(with: alias))
-        case .raw(let expression):
-            return .raw(expression.qualified(with: alias))
+        case .unparsed(let expression):
+            return .unparsed(expression.qualified(with: alias))
         }
     }
 }
@@ -136,7 +178,7 @@ extension SQLJSONExpression: SQLOrderingTerm {
         // Don't have SQLite parse JSON used for ordering
         switch impl {
         case .jsonObject(let expression),
-                .raw(let expression):
+             .unparsed(let expression):
             return .expression(expression)
         }
     }
@@ -147,7 +189,7 @@ extension SQLJSONExpression: SQLSelectable {
         // Don't have SQLite parse selected JSON
         switch impl {
         case .jsonObject(let expression),
-                .raw(let expression):
+             .unparsed(let expression):
             return .expression(expression)
         }
     }
@@ -155,40 +197,74 @@ extension SQLJSONExpression: SQLSelectable {
 
 extension SQLJSONExpression: SQLExpressible {
     public var sqlExpression: SQLExpression {
-        // make sure we return a JSON object
         switch impl {
         case .jsonObject(let expression):
             return expression
-        case .raw(let expression):
+        case .unparsed(let expression):
             return .function("JSON", [expression])
         }
     }
 }
 
 extension SQLJSONExpression: SQLJSONExpressible {
+    // Not a real deprecation, just a usage warning
+    @available(*, deprecated, message: "Already SQLJSONExpression")
     public var sqlJSONExpression: SQLJSONExpression {
         self
+    }
+    
+    public var count: SQLExpression {
+        switch impl {
+        case .jsonObject(let expression),
+             .unparsed(let expression):
+            return .function("JSON_ARRAY_LENGTH", [expression])
+        }
+    }
+    
+    public var minifiedJSON: SQLJSONExpression {
+        switch impl {
+        case .jsonObject:
+            return self
+        case .unparsed(let expression):
+            return .jsonObject(.function("JSON", [expression]))
+        }
+    }
+    
+    // SQLite 3.38.0
+    public subscript(valueAtPath path: SQLExpressible) -> SQLExpression {
+        switch impl {
+        case .jsonObject(let expression),
+            .unparsed(let expression):
+            return .binary(.jsonSubcomponentValue, expression, path.sqlExpression)
+        }
+    }
+    
+    // SQLite 3.38.0
+    public subscript(_ path: SQLExpressible) -> SQLJSONExpression {
+        switch impl {
+        case .jsonObject(let expression),
+             .unparsed(let expression):
+            return .jsonObject(.binary(.jsonSubcomponent, expression, path.sqlExpression))
+        }
     }
 }
 
 // MARK: - SQLExpressible Extension
 
 extension SQLExpressible {
-    // TODO: incorrect. This conflicts with SQLJSONExpressible.sqlJSONExpression.
-    // sqlJSONExpression should be moved to SQLExpressible
     public var sqlJSONExpression: SQLJSONExpression {
-        .raw(sqlExpression)
+        .unparsed(sqlExpression)
     }
 }
 
 extension Collection<any SQLExpressible> {
-    public var sqlJSONArray: SQLJSONExpression {
+    public var sqlJSONExpression: SQLJSONExpression {
         .jsonObject(.function("JSON_ARRAY", map(\.sqlExpression)))
     }
 }
 
 extension Collection where Element: SQLExpressible {
-    public var sqlJSONArray: SQLJSONExpression {
+    public var sqlJSONExpression: SQLJSONExpression {
         .jsonObject(.function("JSON_ARRAY", map(\.sqlExpression)))
     }
 }

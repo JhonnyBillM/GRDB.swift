@@ -42,7 +42,7 @@ final class JSONFunctionTests: GRDBTestCase {
         let dbQueue = try makeDatabaseQueue()
         try dbQueue.inDatabase { db in
             do {
-                let expression = (1...4).sqlJSONArray
+                let expression = (1...4).sqlJSONExpression
                 let value: String? = try SQLRequest("SELECT \(expression)").fetchOne(db)
                 XCTAssertEqual(value, #"[1,2,3,4]"#)
                 XCTAssertEqual(lastSQLQuery, #"SELECT JSON_ARRAY(1, 2, 3, 4)"#)
@@ -53,7 +53,7 @@ final class JSONFunctionTests: GRDBTestCase {
                     2.databaseValue,
                     "3".databaseValue,
                     4.databaseValue,
-                ].sqlJSONArray
+                ].sqlJSONExpression
                 let value: String? = try SQLRequest("SELECT \(expression)").fetchOne(db)
                 XCTAssertEqual(value, #"[1,2,"3",4]"#)
                 XCTAssertEqual(lastSQLQuery, #"SELECT JSON_ARRAY(1, 2, '3', 4)"#)
@@ -65,8 +65,8 @@ final class JSONFunctionTests: GRDBTestCase {
                         2.databaseValue,
                         "3".databaseValue,
                         4.databaseValue,
-                    ].sqlJSONArray
-                ].sqlJSONArray
+                    ].sqlJSONExpression
+                ].sqlJSONExpression
                 let value: String? = try SQLRequest("SELECT \(expression)").fetchOne(db)
                 XCTAssertEqual(value, #"[[1,2,"3",4]]"#)
                 XCTAssertEqual(lastSQLQuery, #"SELECT JSON_ARRAY(JSON_ARRAY(1, 2, '3', 4))"#)
@@ -78,7 +78,7 @@ final class JSONFunctionTests: GRDBTestCase {
                     "3".databaseValue,
                     "[4,5]".databaseValue,
                     "{\"six\":7.7}".databaseValue,
-                ].sqlJSONArray
+                ].sqlJSONExpression
                 let value: String? = try SQLRequest("SELECT \(expression)").fetchOne(db)
                 XCTAssertEqual(value, #"[1,null,"3","[4,5]","{\"six\":7.7}"]"#)
                 XCTAssertEqual(lastSQLQuery, #"SELECT JSON_ARRAY(1, NULL, '3', '[4,5]', '{"six":7.7}')"#)
@@ -90,7 +90,7 @@ final class JSONFunctionTests: GRDBTestCase {
                     "3".databaseValue,
                     "[4,5]".sqlJSONExpression,
                     "{\"six\":7.7}".sqlJSONExpression,
-                ].sqlJSONArray
+                ].sqlJSONExpression
                 let value: String? = try SQLRequest("SELECT \(expression)").fetchOne(db)
                 XCTAssertEqual(value, #"[1,null,"3",[4,5],{"six":7.7}]"#)
                 XCTAssertEqual(lastSQLQuery, #"SELECT JSON_ARRAY(1, NULL, '3', JSON('[4,5]'), JSON('{"six":7.7}'))"#)
@@ -122,9 +122,9 @@ final class JSONFunctionTests: GRDBTestCase {
         
         let dbQueue = try makeDatabaseQueue()
         try dbQueue.inDatabase { db in
-            try assert(db, "[1,[2,3],4]".sqlJSONExpression[json: "$"].count, equal: 3)
-            try assert(db, "[1,[2,3],4]".sqlJSONExpression[json: "$[1]"].count, equal: 2)
-            try assert(db, "[1,[2,3],4]".sqlJSONExpression[json: "$[2]"].count, equal: 0)
+            try assert(db, "[1,[2,3],4]".sqlJSONExpression["$"].count, equal: 3)
+            try assert(db, "[1,[2,3],4]".sqlJSONExpression["$[1]"].count, equal: 2)
+            try assert(db, "[1,[2,3],4]".sqlJSONExpression["$[2]"].count, equal: 0)
         }
     }
     
@@ -146,10 +146,16 @@ final class JSONFunctionTests: GRDBTestCase {
                     XCTAssertEqual(lastSQLQuery, #"SELECT "value" FROM "t" LIMIT 1"#)
                 }
                 do {
-                    // When JSONColumn is used as a result column, we don't perform any JSON validation.
+                    // When JSONColumn is used as a result column, we don't minify JSON.
                     let value = try table.select(jsonColumn, as: String.self).fetchOne(db)
                     XCTAssertEqual(value, #" [1, {"foo" : "bar"}] "#)
                     XCTAssertEqual(lastSQLQuery, #"SELECT "value" FROM "t" LIMIT 1"#)
+                }
+                do {
+                    // Minify JSON when explicitly requested.
+                    let value = try table.select(jsonColumn.minifiedJSON, as: String.self).fetchOne(db)
+                    XCTAssertEqual(value, #"[1,{"foo":"bar"}]"#)
+                    XCTAssertEqual(lastSQLQuery, #"SELECT JSON("value") FROM "t" LIMIT 1"#)
                 }
             }
             
@@ -176,7 +182,7 @@ final class JSONFunctionTests: GRDBTestCase {
                     let expression = [
                         0.databaseValue,
                         column
-                    ].sqlJSONArray
+                    ].sqlJSONExpression
                     let value = try table.select(expression, as: String.self).fetchOne(db)
                     XCTAssertEqual(value, #"[0," [1, {\"foo\" : \"bar\"}] "]"#)
                     XCTAssertEqual(lastSQLQuery, #"SELECT JSON_ARRAY(0, "value") FROM "t" LIMIT 1"#)
@@ -186,7 +192,7 @@ final class JSONFunctionTests: GRDBTestCase {
                     let expression = [
                         0.databaseValue,
                         jsonColumn
-                    ].sqlJSONArray
+                    ].sqlJSONExpression
                     let value = try table.select(expression, as: String.self).fetchOne(db)
                     XCTAssertEqual(value, #"[0,[1,{"foo":"bar"}]]"#)
                     XCTAssertEqual(lastSQLQuery, #"SELECT JSON_ARRAY(0, JSON("value")) FROM "t" LIMIT 1"#)
@@ -196,13 +202,13 @@ final class JSONFunctionTests: GRDBTestCase {
             do {
                 // Test JSON value extraction
                 do {
-                    let expression = column.sqlJSONExpression[value: 0]
+                    let expression = column.sqlJSONExpression[valueAtPath: 0]
                     let value = try table.select(expression, as: Int.self).fetchOne(db)
                     XCTAssertEqual(value, 1)
                     XCTAssertEqual(lastSQLQuery, #"SELECT "value" ->> 0 FROM "t" LIMIT 1"#)
                 }
                 do {
-                    let expression = jsonColumn[value: 0]
+                    let expression = jsonColumn[valueAtPath: 0]
                     let value = try table.select(expression, as: Int.self).fetchOne(db)
                     XCTAssertEqual(value, 1)
                     XCTAssertEqual(lastSQLQuery, #"SELECT "value" ->> 0 FROM "t" LIMIT 1"#)
@@ -212,13 +218,13 @@ final class JSONFunctionTests: GRDBTestCase {
             do {
                 // Test JSON extraction
                 do {
-                    let expression = column.sqlJSONExpression[json: 1]
+                    let expression = column.sqlJSONExpression[1]
                     let value = try table.select(expression, as: String.self).fetchOne(db)
                     XCTAssertEqual(value, #"{"foo":"bar"}"#)
                     XCTAssertEqual(lastSQLQuery, #"SELECT "value" -> 1 FROM "t" LIMIT 1"#)
                 }
                 do {
-                    let expression = jsonColumn[json: 1]
+                    let expression = jsonColumn[1]
                     let value = try table.select(expression, as: String.self).fetchOne(db)
                     XCTAssertEqual(value, #"{"foo":"bar"}"#)
                     XCTAssertEqual(lastSQLQuery, #"SELECT "value" -> 1 FROM "t" LIMIT 1"#)
@@ -228,16 +234,32 @@ final class JSONFunctionTests: GRDBTestCase {
             do {
                 // Test deep JSON extraction
                 do {
-                    let expression = column.sqlJSONExpression[json: 1][json: "foo"]
+                    let expression = column.sqlJSONExpression[1]["foo"]
                     let value = try table.select(expression, as: String.self).fetchOne(db)
                     XCTAssertEqual(value, #""bar""#)
                     XCTAssertEqual(lastSQLQuery, #"SELECT ("value" -> 1) -> 'foo' FROM "t" LIMIT 1"#)
                 }
                 do {
-                    let expression = jsonColumn[json: 1][json: "foo"]
+                    let expression = jsonColumn[1]["foo"]
                     let value = try table.select(expression, as: String.self).fetchOne(db)
                     XCTAssertEqual(value, #""bar""#)
                     XCTAssertEqual(lastSQLQuery, #"SELECT ("value" -> 1) -> 'foo' FROM "t" LIMIT 1"#)
+                }
+            }
+            
+            do {
+                // Test count
+                do {
+                    let expression = column.sqlJSONExpression.count
+                    let value = try table.select(expression, as: Int.self).fetchOne(db)
+                    XCTAssertEqual(value, 2)
+                    XCTAssertEqual(lastSQLQuery, #"SELECT JSON_ARRAY_LENGTH("value") FROM "t" LIMIT 1"#)
+                }
+                do {
+                    let expression = jsonColumn.count
+                    let value = try table.select(expression, as: Int.self).fetchOne(db)
+                    XCTAssertEqual(value, 2)
+                    XCTAssertEqual(lastSQLQuery, #"SELECT JSON_ARRAY_LENGTH("value") FROM "t" LIMIT 1"#)
                 }
             }
         }

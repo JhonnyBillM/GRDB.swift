@@ -16,6 +16,10 @@ extension Data: DatabaseValueConvertible, StatementColumnConvertible {
         DatabaseValue(storage: .blob(self))
     }
     
+    public var sqlJSONExpression: SQLJSONExpression {
+        databaseValue.sqlJSONExpression
+    }
+    
     /// Returns a `Data` from the specified database value.
     ///
     /// If the database value contains a data blob, returns it.
