@@ -435,12 +435,7 @@ public class TableAlias {
         _ expression: some SQLJSONExpressible & SQLSpecificExpressible & SQLSelectable & SQLOrderingTerm)
     -> SQLJSONExpression
     {
-        switch expression.sqlJSONExpression.impl {
-        case .jsonObject(let expression):
-            return .jsonObject(self[expression])
-        case .raw(let expression):
-            return .raw(self[expression])
-        }
+        expression.sqlJSONExpression.qualified(with: self)
     }
 
     /// Returns an SQL ordering term that refers to the aliased table.

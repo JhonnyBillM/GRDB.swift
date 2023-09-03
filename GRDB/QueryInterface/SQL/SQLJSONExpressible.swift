@@ -6,51 +6,27 @@ public protocol SQLJSONExpressible: SQLSpecificExpressible {
 
 extension SQLJSONExpressible {
     public var sqlOrdering: SQLOrdering {
-        // Don't have SQLite parse JSON used for ordering
-        switch sqlJSONExpression.impl {
-        case .jsonObject(let expression),
-             .raw(let expression):
-            return .expression(expression)
-        }
+        sqlJSONExpression.sqlOrdering
     }
     
     public var sqlSelection: SQLSelection {
-        // Don't have SQLite parse selected JSON
-        switch sqlJSONExpression.impl {
-        case .jsonObject(let expression),
-             .raw(let expression):
-            return .expression(expression)
-        }
+        sqlJSONExpression.sqlSelection
     }
     
     public var sqlExpression: SQLExpression {
-        // make sure we return a JSON object
-        switch sqlJSONExpression.impl {
-        case .jsonObject(let expression):
-            return expression
-        case .raw(let expression):
-            return .function("JSON", [expression])
-        }
+        sqlJSONExpression.sqlExpression
     }
 }
 
 extension SQLJSONExpressible {
     // SQLite 3.38.0
     public subscript(value path: SQLExpressible) -> SQLExpression {
-        switch sqlJSONExpression.impl {
-        case .jsonObject(let expression),
-            .raw(let expression):
-            return .binary(.jsonSubcomponentValue, expression, path.sqlExpression)
-        }
+        sqlJSONExpression.jsonSubcomponentValue(atPath: path)
     }
     
     // SQLite 3.38.0
     public subscript(json path: SQLExpressible) -> SQLJSONExpression {
-        switch sqlJSONExpression.impl {
-        case .jsonObject(let expression),
-             .raw(let expression):
-            return .jsonObject(.binary(.jsonSubcomponent, expression, path.sqlExpression))
-        }
+        sqlJSONExpression.jsonSubcomponent(atPath: path)
     }
 }
 
@@ -96,7 +72,7 @@ extension JSONColumn: SQLJSONExpressible {
 // MARK: - SQLJSONExpression
 
 public struct SQLJSONExpression {
-    enum Impl {
+    private enum Impl {
         /// A JSON object that comes directly from the result of another
         /// JSON function or from the `->` operator (but not the
         /// `->>` operator, and is understood to be actual JSON.
@@ -105,7 +81,7 @@ public struct SQLJSONExpression {
         /// An expression that may not be understood as an actual JSON object.
         case raw(SQLExpression)
     }
-    var impl: Impl
+    private var impl: Impl
     
     private init(impl: Impl) {
         self.impl = impl
@@ -125,6 +101,67 @@ public struct SQLJSONExpression {
     
     static func raw(_ expression: SQLExpression) -> Self {
         .init(impl: .raw(expression))
+    }
+    
+    // SQLite 3.38.0
+    func jsonSubcomponentValue(atPath path: SQLExpressible) -> SQLExpression {
+        switch impl {
+        case .jsonObject(let expression),
+            .raw(let expression):
+            return .binary(.jsonSubcomponentValue, expression, path.sqlExpression)
+        }
+    }
+    
+    // SQLite 3.38.0
+    func jsonSubcomponent(atPath path: SQLExpressible) -> SQLJSONExpression {
+        switch impl {
+        case .jsonObject(let expression),
+             .raw(let expression):
+            return .jsonObject(.binary(.jsonSubcomponent, expression, path.sqlExpression))
+        }
+    }
+    
+    func qualified(with alias: TableAlias) -> SQLJSONExpression {
+        switch impl {
+        case .jsonObject(let expression):
+            return .jsonObject(expression.qualified(with: alias))
+        case .raw(let expression):
+            return .raw(expression.qualified(with: alias))
+        }
+    }
+}
+
+extension SQLJSONExpression: SQLOrderingTerm {
+    public var sqlOrdering: SQLOrdering {
+        // Don't have SQLite parse JSON used for ordering
+        switch impl {
+        case .jsonObject(let expression),
+                .raw(let expression):
+            return .expression(expression)
+        }
+    }
+}
+
+extension SQLJSONExpression: SQLSelectable {
+    public var sqlSelection: SQLSelection {
+        // Don't have SQLite parse selected JSON
+        switch impl {
+        case .jsonObject(let expression),
+                .raw(let expression):
+            return .expression(expression)
+        }
+    }
+}
+
+extension SQLJSONExpression: SQLExpressible {
+    public var sqlExpression: SQLExpression {
+        // make sure we return a JSON object
+        switch impl {
+        case .jsonObject(let expression):
+            return expression
+        case .raw(let expression):
+            return .function("JSON", [expression])
+        }
     }
 }
 
