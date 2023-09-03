@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		561EF34E2AA4A4BF0060F4BE /* JSONFunctionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 561EF34D2AA4A4BF0060F4BE /* JSONFunctionTests.swift */; };
+		561EF34F2AA4A4BF0060F4BE /* JSONFunctionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 561EF34D2AA4A4BF0060F4BE /* JSONFunctionTests.swift */; };
 		56419FC824A540A1004967E1 /* FetchRequestTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56419EFD24A54093004967E1 /* FetchRequestTests.swift */; };
 		56419FC924A540A1004967E1 /* FetchRequestTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56419EFD24A54093004967E1 /* FetchRequestTests.swift */; };
 		56419FCA24A540A1004967E1 /* DatabasePoolBackupTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56419EFE24A54093004967E1 /* DatabasePoolBackupTests.swift */; };
@@ -475,6 +477,7 @@
 /* Begin PBXFileReference section */
 		04298D834C818285823558AB /* Pods-GRDBTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-GRDBTests.release.xcconfig"; path = "Target Support Files/Pods-GRDBTests/Pods-GRDBTests.release.xcconfig"; sourceTree = "<group>"; };
 		47C5D1B9AFFE795AA1D6EA5D /* Pods-GRDBTestsEncrypted.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-GRDBTestsEncrypted.release.xcconfig"; path = "Target Support Files/Pods-GRDBTestsEncrypted/Pods-GRDBTestsEncrypted.release.xcconfig"; sourceTree = "<group>"; };
+		561EF34D2AA4A4BF0060F4BE /* JSONFunctionTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = JSONFunctionTests.swift; sourceTree = "<group>"; };
 		56419EFD24A54093004967E1 /* FetchRequestTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FetchRequestTests.swift; sourceTree = "<group>"; };
 		56419EFE24A54093004967E1 /* DatabasePoolBackupTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DatabasePoolBackupTests.swift; sourceTree = "<group>"; };
 		56419EFF24A54093004967E1 /* TableRecordDeleteTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TableRecordDeleteTests.swift; sourceTree = "<group>"; };
@@ -942,6 +945,7 @@
 				56419FA824A5409E004967E1 /* IndexInfoTests.swift */,
 				56419F3824A54096004967E1 /* InflectionsTests.swift */,
 				56419F6D24A5409A004967E1 /* JoinSupportTests.swift */,
+				561EF34D2AA4A4BF0060F4BE /* JSONFunctionTests.swift */,
 				56419F7B24A5409B004967E1 /* MapCursorTests.swift */,
 				56419F4524A54097004967E1 /* MutablePersistableRecordChangesTests.swift */,
 				56419F0224A54093004967E1 /* MutablePersistableRecordEncodableTests.swift */,
@@ -1305,6 +1309,7 @@
 				5641A09424A540A1004967E1 /* ValueObservationCountTests.swift in Sources */,
 				5641A0EA24A540A1004967E1 /* RowFromDictionaryLiteralTests.swift in Sources */,
 				5641A09224A540A1004967E1 /* AssociationHasOneThroughDecodableRecordTests.swift in Sources */,
+				561EF34E2AA4A4BF0060F4BE /* JSONFunctionTests.swift in Sources */,
 				5641A04E24A540A1004967E1 /* RecordUniqueIndexTests.swift in Sources */,
 				568C3F912A5AB3A800A2309D /* CommonTableExpressionTests.swift in Sources */,
 				5641A12824A540A1004967E1 /* FilterCursorTests.swift in Sources */,
@@ -1538,6 +1543,7 @@
 				5641A09524A540A1004967E1 /* ValueObservationCountTests.swift in Sources */,
 				5641A0EB24A540A1004967E1 /* RowFromDictionaryLiteralTests.swift in Sources */,
 				5641A09324A540A1004967E1 /* AssociationHasOneThroughDecodableRecordTests.swift in Sources */,
+				561EF34F2AA4A4BF0060F4BE /* JSONFunctionTests.swift in Sources */,
 				5641A04F24A540A1004967E1 /* RecordUniqueIndexTests.swift in Sources */,
 				568C3F922A5AB3A800A2309D /* CommonTableExpressionTests.swift in Sources */,
 				5641A12924A540A1004967E1 /* FilterCursorTests.swift in Sources */,

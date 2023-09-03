@@ -377,6 +377,12 @@ public struct SQLExpression {
         
         /// The `>>` bitwise right shift operator
         static let rightShift = BinaryOperator(">>")
+        
+        /// The `->` json operator
+        static let jsonSubcomponent = BinaryOperator("->")
+        
+        /// The `->>` json operator
+        static let jsonSubcomponentValue = BinaryOperator("->>")
     }
     
     /// `EscapableBinaryOperator` is an SQLite binary operator that accepts an

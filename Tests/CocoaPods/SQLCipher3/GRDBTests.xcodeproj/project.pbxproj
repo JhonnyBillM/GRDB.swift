@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		561EF3512AA4A4D10060F4BE /* JSONFunctionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 561EF3502AA4A4D10060F4BE /* JSONFunctionTests.swift */; };
+		561EF3522AA4A4D10060F4BE /* JSONFunctionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 561EF3502AA4A4D10060F4BE /* JSONFunctionTests.swift */; };
 		56419D6724A54062004967E1 /* DatabasePoolTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56419C9C24A54053004967E1 /* DatabasePoolTests.swift */; };
 		56419D6824A54062004967E1 /* DatabasePoolTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56419C9C24A54053004967E1 /* DatabasePoolTests.swift */; };
 		56419D6924A54062004967E1 /* ResultCodeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56419C9D24A54053004967E1 /* ResultCodeTests.swift */; };
@@ -459,6 +461,7 @@
 /* Begin PBXFileReference section */
 		04298D834C818285823558AB /* Pods-GRDBTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-GRDBTests.release.xcconfig"; path = "Target Support Files/Pods-GRDBTests/Pods-GRDBTests.release.xcconfig"; sourceTree = "<group>"; };
 		47C5D1B9AFFE795AA1D6EA5D /* Pods-GRDBTestsEncrypted.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-GRDBTestsEncrypted.release.xcconfig"; path = "Target Support Files/Pods-GRDBTestsEncrypted/Pods-GRDBTestsEncrypted.release.xcconfig"; sourceTree = "<group>"; };
+		561EF3502AA4A4D10060F4BE /* JSONFunctionTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = JSONFunctionTests.swift; sourceTree = "<group>"; };
 		56419C9C24A54053004967E1 /* DatabasePoolTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DatabasePoolTests.swift; sourceTree = "<group>"; };
 		56419C9D24A54053004967E1 /* ResultCodeTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ResultCodeTests.swift; sourceTree = "<group>"; };
 		56419C9E24A54053004967E1 /* DatabaseQueueTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DatabaseQueueTests.swift; sourceTree = "<group>"; };
@@ -911,6 +914,7 @@
 				56419CDE24A54058004967E1 /* IndexInfoTests.swift */,
 				56419CF024A54059004967E1 /* InflectionsTests.swift */,
 				56419D0024A5405A004967E1 /* JoinSupportTests.swift */,
+				561EF3502AA4A4D10060F4BE /* JSONFunctionTests.swift */,
 				56419CDC24A54058004967E1 /* MapCursorTests.swift */,
 				56419D0224A5405A004967E1 /* MutablePersistableRecordChangesTests.swift */,
 				56419D2F24A5405E004967E1 /* MutablePersistableRecordEncodableTests.swift */,
@@ -1231,6 +1235,7 @@
 				5641A1B224A540D6004967E1 /* Next.swift in Sources */,
 				56419E1F24A54062004967E1 /* ValueObservationRecorderTests.swift in Sources */,
 				56419DA124A54062004967E1 /* EncryptionTests.swift in Sources */,
+				561EF3512AA4A4D10060F4BE /* JSONFunctionTests.swift in Sources */,
 				56419DF124A54062004967E1 /* FoundationNSNullTests.swift in Sources */,
 				565A27CC27871FFF00659A62 /* BackupTestCase.swift in Sources */,
 				56419EEB24A54063004967E1 /* RecordPersistenceConflictPolicy.swift in Sources */,
@@ -1457,6 +1462,7 @@
 				5641A1B324A540D6004967E1 /* Next.swift in Sources */,
 				56419E2024A54062004967E1 /* ValueObservationRecorderTests.swift in Sources */,
 				56419DA224A54062004967E1 /* EncryptionTests.swift in Sources */,
+				561EF3522AA4A4D10060F4BE /* JSONFunctionTests.swift in Sources */,
 				56419DF224A54062004967E1 /* FoundationNSNullTests.swift in Sources */,
 				565A27CD27871FFF00659A62 /* BackupTestCase.swift in Sources */,
 				56419EEC24A54063004967E1 /* RecordPersistenceConflictPolicy.swift in Sources */,
