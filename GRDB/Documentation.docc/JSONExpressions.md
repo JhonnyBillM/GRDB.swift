@@ -12,4 +12,4 @@ SQLite [JSON Functions And Operators](https://www.sqlite.org/json1.html).
 
 ### Supporting Type
 
-- ``SQLJSONExpression``
+- ``SQLJSON``

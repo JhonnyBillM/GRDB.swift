@@ -434,9 +434,9 @@ public class TableAlias {
     /// Returns an SQL JSON expression that refers to the aliased table.
     public subscript(
         _ expression: some SQLJSONExpressible & SQLSpecificExpressible & SQLSelectable & SQLOrderingTerm)
-    -> SQLJSONExpression
+    -> SQLJSON
     {
-        expression.sqlJSONExpression.qualified(with: self)
+        expression.sqlJSON.qualified(with: self)
     }
     
     /// Returns an SQL ordering term that refers to the aliased table.

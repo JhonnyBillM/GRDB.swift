@@ -9,8 +9,8 @@ extension NSData: DatabaseValueConvertible {
         (self as Data).databaseValue
     }
     
-    public var sqlJSONExpression: SQLJSONExpression {
-        (self as Data).sqlJSONExpression
+    public var sqlJSON: SQLJSON {
+        (self as Data).sqlJSON
     }
     
     /// Returns a `NSData` from the specified database value.

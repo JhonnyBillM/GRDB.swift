@@ -24,31 +24,6 @@ public protocol SQLJSONExpressible: SQLSpecificExpressible {
     /// Related SQLite documentation <https://www.sqlite.org/json1.html#the_json_array_length_function>
     var count: SQLExpression { get }
     
-    /// Returns a minified version of that JSON expression (with all
-    /// unnecessary whitespace removed).
-    ///
-    /// Use this property when you want SQLite to parse and minify JSON
-    /// columns, for example. Compare:
-    ///
-    /// ```swift
-    /// let column = JSONColumn("detailsJSON")
-    ///
-    /// // Not minified
-    /// // SQL> SELECT detailsJSON FROM player WHERE id = 1
-    /// let rawDetails = Player
-    ///     .filter(id: 1)
-    ///     .select(column, as: String.self)
-    ///     .fetchOne(db)
-    ///
-    /// // Minified
-    /// // SQL> SELECT JSON(detailsJSON) FROM player WHERE id = 1
-    /// let rawDetails = Player
-    ///     .filter(id: 1)
-    ///     .select(column.minifiedJSON, as: String.self)
-    ///     .fetchOne(db)
-    /// ```
-    var minifiedJSON: SQLJSONExpression { get }
-    
     // SQLite 3.38.0
     /// Returns an SQL string, integer, double, or NULL value that
     /// represents the selected subcomponent, extracted with the `->>`
@@ -59,7 +34,7 @@ public protocol SQLJSONExpressible: SQLSpecificExpressible {
     /// ```swift
     /// let expression = """
     ///     {"a":"xyz"}
-    ///     """.sqlJSONExpression
+    ///     """.sqlJSON
     /// let value = expression[valueAtPath: "$.a"]
     /// let string = try SQLRequest<String>("SELECT \(expression)").fetchOne(db)
     /// // Prints "xyz" (quotes not included)
@@ -76,13 +51,13 @@ public protocol SQLJSONExpressible: SQLSpecificExpressible {
     /// ```swift
     /// let expression = """
     ///     {"a":"xyz"}
-    ///     """.sqlJSONExpression
+    ///     """.sqlJSON
     /// let value = expression["$.a"]
     /// let string = try SQLRequest<String>("SELECT \(expression)").fetchOne(db)
     /// // Prints "xyz" (quotes included)
     /// print(string)
     /// ```
-    subscript(_ path: some SQLExpressible) -> SQLJSONExpression { get }
+    subscript(_ path: some SQLExpressible) -> SQLJSON { get }
     
     /// Returns an SQL string, integer, double, NULL, or a JSON
     /// representation of the selected subcomponent(s), extracted with the
@@ -91,44 +66,42 @@ public protocol SQLJSONExpressible: SQLSpecificExpressible {
 }
 
 extension SQLJSONExpressible {
-    public var sqlOrdering: SQLOrdering {
-        sqlJSONExpression.sqlOrdering
-    }
-    
-    public var sqlSelection: SQLSelection {
-        sqlJSONExpression.sqlSelection
-    }
-    
     public var sqlExpression: SQLExpression {
-        sqlJSONExpression.sqlExpression
+        sqlJSON.sqlExpression
     }
     
     public var count: SQLExpression {
-        sqlJSONExpression.count
-    }
-    
-    public var minifiedJSON: SQLJSONExpression {
-        sqlJSONExpression.minifiedJSON
+        sqlJSON.count
     }
     
     public subscript(valueAtPath path: some SQLExpressible) -> SQLExpression {
-        sqlJSONExpression[valueAtPath: path]
+        sqlJSON[valueAtPath: path]
     }
     
-    public subscript(_ path: some SQLExpressible) -> SQLJSONExpression {
-        sqlJSONExpression[path]
+    public subscript(_ path: some SQLExpressible) -> SQLJSON {
+        sqlJSON[path]
     }
     
     public func extract(_ paths: [any SQLExpressible]) -> SQLExpression {
-        sqlJSONExpression.extract(paths)
+        sqlJSON.extract(paths)
     }
 }
 
 // MARK: - JSONColumn
 
-/// A column in a database table that contains JSON.
+/// A column in a database table that is parsed as JSON.
+///
+/// The JSON fetched by this column is always parsed and minified by SQLite,
+/// with the `JSON` SQL function.
+///
+/// Related SQLite documentation <https://www.sqlite.org/json1.html#the_json_function>
 public struct JSONColumn {
     public var name: String
+    
+    /// Returns a raw ``Column`` that is not parsed by SQLite.
+    public var unparsedColumn: Column {
+        Column(name)
+    }
     
     /// Creates a `JSONColumn` given its name.
     ///
@@ -153,14 +126,14 @@ extension JSONColumn: SQLExpressible {
 extension JSONColumn: ColumnExpression { }
 
 extension JSONColumn: SQLJSONExpressible {
-    public var sqlJSONExpression: SQLJSONExpression {
+    public var sqlJSON: SQLJSON {
         .unparsed(.column(name))
     }
 }
 
-// MARK: - SQLJSONExpression
+// MARK: - SQLJSON
 
-public struct SQLJSONExpression {
+public struct SQLJSON {
     private enum Impl {
         /// A JSON object that comes directly from the result of another
         /// JSON function or from the `->` operator (but not the
@@ -173,7 +146,7 @@ public struct SQLJSONExpression {
     
     private var impl: Impl
     
-    var unparsedExpression: SQLExpression {
+    var unparsedJSON: SQLExpression {
         switch impl {
         case .jsonObject(let expression), .unparsed(let expression):
             return expression
@@ -192,7 +165,7 @@ public struct SQLJSONExpression {
         .init(impl: .unparsed(expression))
     }
     
-    func qualified(with alias: TableAlias) -> SQLJSONExpression {
+    func qualified(with alias: TableAlias) -> SQLJSON {
         switch impl {
         case .jsonObject(let expression):
             return .jsonObject(expression.qualified(with: alias))
@@ -202,21 +175,7 @@ public struct SQLJSONExpression {
     }
 }
 
-extension SQLJSONExpression: SQLOrderingTerm {
-    public var sqlOrdering: SQLOrdering {
-        // Don't have SQLite parse JSON used for ordering
-        .expression(unparsedExpression)
-    }
-}
-
-extension SQLJSONExpression: SQLSelectable {
-    public var sqlSelection: SQLSelection {
-        // Don't have SQLite parse selected JSON
-        .expression(unparsedExpression)
-    }
-}
-
-extension SQLJSONExpression: SQLExpressible {
+extension SQLJSON: SQLExpressible {
     public var sqlExpression: SQLExpression {
         switch impl {
         case .jsonObject(let expression):
@@ -227,57 +186,48 @@ extension SQLJSONExpression: SQLExpressible {
     }
 }
 
-extension SQLJSONExpression: SQLJSONExpressible {
+extension SQLJSON: SQLJSONExpressible {
     // Not a real deprecation, just a usage warning
-    @available(*, deprecated, message: "Already SQLJSONExpression")
-    public var sqlJSONExpression: SQLJSONExpression {
+    @available(*, deprecated, message: "Already SQLJSON")
+    public var sqlJSON: SQLJSON {
         self
     }
     
     public var count: SQLExpression {
-        .function("JSON_ARRAY_LENGTH", [unparsedExpression])
-    }
-    
-    public var minifiedJSON: SQLJSONExpression {
-        switch impl {
-        case .jsonObject:
-            return self
-        case .unparsed(let expression):
-            return .jsonObject(.function("JSON", [expression]))
-        }
+        .function("JSON_ARRAY_LENGTH", [unparsedJSON])
     }
     
     // SQLite 3.38.0
     public subscript(valueAtPath path: some SQLExpressible) -> SQLExpression {
-        .binary(.jsonSubcomponentValue, unparsedExpression, path.sqlExpression)
+        .binary(.jsonSubcomponentValue, unparsedJSON, path.sqlExpression)
     }
     
     // SQLite 3.38.0
-    public subscript(_ path: some SQLExpressible) -> SQLJSONExpression {
-        .jsonObject(.binary(.jsonSubcomponent, unparsedExpression, path.sqlExpression))
+    public subscript(_ path: some SQLExpressible) -> SQLJSON {
+        .jsonObject(.binary(.jsonSubcomponent, unparsedJSON, path.sqlExpression))
     }
     
     public func extract(_ paths: [any SQLExpressible]) -> SQLExpression {
-        .function("JSON_EXTRACT", [unparsedExpression] + paths.map(\.sqlExpression))
+        .function("JSON_EXTRACT", [unparsedJSON] + paths.map(\.sqlExpression))
     }
 }
 
 // MARK: - SQLExpressible Extension
 
 extension SQLExpressible {
-    public var sqlJSONExpression: SQLJSONExpression {
+    public var sqlJSON: SQLJSON {
         .unparsed(sqlExpression)
     }
 }
 
 extension Collection<any SQLExpressible> {
-    public var sqlJSONExpression: SQLJSONExpression {
+    public var sqlJSON: SQLJSON {
         .jsonObject(.function("JSON_ARRAY", map(\.sqlExpression)))
     }
 }
 
 extension Collection where Element: SQLExpressible {
-    public var sqlJSONExpression: SQLJSONExpression {
+    public var sqlJSON: SQLJSON {
         .jsonObject(.function("JSON_ARRAY", map(\.sqlExpression)))
     }
 }
