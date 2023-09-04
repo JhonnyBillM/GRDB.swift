@@ -6,7 +6,20 @@
 /// Related SQLite documentation <https://www.sqlite.org/json1.html>.
 public protocol SQLJSONExpressible: SQLSpecificExpressible {
     /// Returns the number of elements in the JSON array, or 0 if the
-    /// expression is some kind of JSON value other than an array.
+    /// expression is some kind of JSON value other than an array, with the
+    /// `JSON_ARRAY_LENGTH` SQL function.
+    ///
+    /// For example:
+    ///
+    /// ```swift
+    /// let column = JSONColumn("awardsJSON")
+    ///
+    /// // SQL> SELECT JSON_ARRAY_LENGTH(awardsJSON) FROM player WHERE id = 1
+    /// let awardCount = Player
+    ///     .filter(id: 1)
+    ///     .select(column.count, as: Int.self)
+    ///     .fetchOne(db)
+    /// ```
     ///
     /// Related SQLite documentation <https://www.sqlite.org/json1.html#the_json_array_length_function>
     var count: SQLExpression { get }
@@ -38,7 +51,8 @@ public protocol SQLJSONExpressible: SQLSpecificExpressible {
     
     // SQLite 3.38.0
     /// Returns an SQL string, integer, double, or NULL value that
-    /// represents the selected subcomponent.
+    /// represents the selected subcomponent, extracted with the `->>`
+    /// SQL operator.
     ///
     /// For example:
     ///
@@ -51,10 +65,11 @@ public protocol SQLJSONExpressible: SQLSpecificExpressible {
     /// // Prints "xyz" (quotes not included)
     /// print(string)
     /// ```
-    subscript(valueAtPath path: SQLExpressible) -> SQLExpression { get }
+    subscript(valueAtPath path: some SQLExpressible) -> SQLExpression { get }
     
     // SQLite 3.38.0
-    /// Returns a JSON representation of the selected subcomponent.
+    /// Returns a JSON representation of the selected subcomponent,
+    /// extracted with the `->` SQL operator.
     ///
     /// For example:
     ///
@@ -67,7 +82,12 @@ public protocol SQLJSONExpressible: SQLSpecificExpressible {
     /// // Prints "xyz" (quotes included)
     /// print(string)
     /// ```
-    subscript(_ path: SQLExpressible) -> SQLJSONExpression { get }
+    subscript(_ path: some SQLExpressible) -> SQLJSONExpression { get }
+    
+    /// Returns an SQL string, integer, double, NULL, or a JSON
+    /// representation of the selected subcomponent(s), extracted with the
+    /// `JSON_EXTRACT` SQL function.
+    func extract(_ paths: [any SQLExpressible]) -> SQLExpression
 }
 
 extension SQLJSONExpressible {
@@ -90,15 +110,17 @@ extension SQLJSONExpressible {
     public var minifiedJSON: SQLJSONExpression {
         sqlJSONExpression.minifiedJSON
     }
-}
-
-extension SQLJSONExpressible {
-    public subscript(valueAtPath path: SQLExpressible) -> SQLExpression {
+    
+    public subscript(valueAtPath path: some SQLExpressible) -> SQLExpression {
         sqlJSONExpression[valueAtPath: path]
     }
     
-    public subscript(_ path: SQLExpressible) -> SQLJSONExpression {
+    public subscript(_ path: some SQLExpressible) -> SQLJSONExpression {
         sqlJSONExpression[path]
+    }
+    
+    public func extract(_ paths: [any SQLExpressible]) -> SQLExpression {
+        sqlJSONExpression.extract(paths)
     }
 }
 
@@ -151,6 +173,13 @@ public struct SQLJSONExpression {
     
     private var impl: Impl
     
+    var unparsedExpression: SQLExpression {
+        switch impl {
+        case .jsonObject(let expression), .unparsed(let expression):
+            return expression
+        }
+    }
+    
     private init(impl: Impl) {
         self.impl = impl
     }
@@ -176,22 +205,14 @@ public struct SQLJSONExpression {
 extension SQLJSONExpression: SQLOrderingTerm {
     public var sqlOrdering: SQLOrdering {
         // Don't have SQLite parse JSON used for ordering
-        switch impl {
-        case .jsonObject(let expression),
-             .unparsed(let expression):
-            return .expression(expression)
-        }
+        .expression(unparsedExpression)
     }
 }
 
 extension SQLJSONExpression: SQLSelectable {
     public var sqlSelection: SQLSelection {
         // Don't have SQLite parse selected JSON
-        switch impl {
-        case .jsonObject(let expression),
-             .unparsed(let expression):
-            return .expression(expression)
-        }
+        .expression(unparsedExpression)
     }
 }
 
@@ -214,11 +235,7 @@ extension SQLJSONExpression: SQLJSONExpressible {
     }
     
     public var count: SQLExpression {
-        switch impl {
-        case .jsonObject(let expression),
-             .unparsed(let expression):
-            return .function("JSON_ARRAY_LENGTH", [expression])
-        }
+        .function("JSON_ARRAY_LENGTH", [unparsedExpression])
     }
     
     public var minifiedJSON: SQLJSONExpression {
@@ -231,21 +248,17 @@ extension SQLJSONExpression: SQLJSONExpressible {
     }
     
     // SQLite 3.38.0
-    public subscript(valueAtPath path: SQLExpressible) -> SQLExpression {
-        switch impl {
-        case .jsonObject(let expression),
-            .unparsed(let expression):
-            return .binary(.jsonSubcomponentValue, expression, path.sqlExpression)
-        }
+    public subscript(valueAtPath path: some SQLExpressible) -> SQLExpression {
+        .binary(.jsonSubcomponentValue, unparsedExpression, path.sqlExpression)
     }
     
     // SQLite 3.38.0
-    public subscript(_ path: SQLExpressible) -> SQLJSONExpression {
-        switch impl {
-        case .jsonObject(let expression),
-             .unparsed(let expression):
-            return .jsonObject(.binary(.jsonSubcomponent, expression, path.sqlExpression))
-        }
+    public subscript(_ path: some SQLExpressible) -> SQLJSONExpression {
+        .jsonObject(.binary(.jsonSubcomponent, unparsedExpression, path.sqlExpression))
+    }
+    
+    public func extract(_ paths: [any SQLExpressible]) -> SQLExpression {
+        .function("JSON_EXTRACT", [unparsedExpression] + paths.map(\.sqlExpression))
     }
 }
 
