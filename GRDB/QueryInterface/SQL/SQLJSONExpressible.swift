@@ -4,6 +4,21 @@
 /// See <doc:JSONExpressions>.
 /// 
 /// Related SQLite documentation <https://www.sqlite.org/json1.html>.
+///
+/// ## Topics
+///
+/// ### Extracting SQL and JSON Subcomponents
+///
+/// - ``subscript(_:)-243u4``
+/// - `subscript(jsonAtPath:)-96b4q`
+/// - `subscript(_:)-3md8b`
+/// - ``subscript(jsonAtPath:)-5t07i``
+/// - ``extract(_:)-1qvzx``
+///
+/// ### Counting Elements in a JSON array
+///
+/// - ``count-4kpk7``
+/// - `count-581pp`
 public protocol SQLJSONExpressible: SQLSpecificExpressible {
     /// Returns the number of elements in the JSON array, or 0 if the
     /// expression is some kind of JSON value other than an array, with the
@@ -25,9 +40,8 @@ public protocol SQLJSONExpressible: SQLSpecificExpressible {
     var count: SQLExpression { get }
     
     // SQLite 3.38.0
-    /// Returns an SQL string, integer, double, or NULL value that
-    /// represents the selected subcomponent, extracted with the `->>`
-    /// SQL operator.
+    /// Returns an SQL representation of the selected subcomponent,
+    /// extracted with the `->>` SQL operator.
     ///
     /// For example:
     ///
@@ -35,12 +49,14 @@ public protocol SQLJSONExpressible: SQLSpecificExpressible {
     /// let expression = """
     ///     {"a":"xyz"}
     ///     """.sqlJSON
-    /// let value = expression[valueAtPath: "$.a"]
+    /// let value = expression["$.a"]
     /// let string = try SQLRequest<String>("SELECT \(expression)").fetchOne(db)
     /// // Prints "xyz" (quotes not included)
     /// print(string)
     /// ```
-    subscript(valueAtPath path: some SQLExpressible) -> SQLExpression { get }
+    ///
+    /// Related SQLite documentation <https://www.sqlite.org/json1.html#the_and_operators>
+    subscript(_ path: some SQLExpressible) -> SQLExpression { get }
     
     // SQLite 3.38.0
     /// Returns a JSON representation of the selected subcomponent,
@@ -57,11 +73,18 @@ public protocol SQLJSONExpressible: SQLSpecificExpressible {
     /// // Prints "xyz" (quotes included)
     /// print(string)
     /// ```
-    subscript(_ path: some SQLExpressible) -> SQLJSON { get }
+    ///
+    /// Related SQLite documentation <https://www.sqlite.org/json1.html#the_and_operators>
+    subscript(jsonAtPath path: some SQLExpressible) -> SQLJSON { get }
     
-    /// Returns an SQL string, integer, double, NULL, or a JSON
-    /// representation of the selected subcomponent(s), extracted with the
-    /// `JSON_EXTRACT` SQL function.
+    /// Returns an SQL or JSON representation of the selected subcomponent,
+    /// extracted with the `JSON_EXTRACT` SQL function.
+    ///
+    /// Provided you are sure that the extracted value is valid JSON, you'll
+    /// need to use the ``SQLExpressible/sqlJSON`` property on the result in
+    /// order to perform further JSON extractions.
+    ///
+    /// Related SQLite documentation <https://www.sqlite.org/json1.html#the_json_extract_function>
     func extract(_ paths: [any SQLExpressible]) -> SQLExpression
 }
 
@@ -74,12 +97,12 @@ extension SQLJSONExpressible {
         sqlJSON.count
     }
     
-    public subscript(valueAtPath path: some SQLExpressible) -> SQLExpression {
-        sqlJSON[valueAtPath: path]
+    public subscript(_ path: some SQLExpressible) -> SQLExpression {
+        sqlJSON[path]
     }
     
-    public subscript(_ path: some SQLExpressible) -> SQLJSON {
-        sqlJSON[path]
+    public subscript(jsonAtPath path: some SQLExpressible) -> SQLJSON {
+        sqlJSON[jsonAtPath: path]
     }
     
     public func extract(_ paths: [any SQLExpressible]) -> SQLExpression {
@@ -133,6 +156,9 @@ extension JSONColumn: SQLJSONExpressible {
 
 // MARK: - SQLJSON
 
+/// A JSON SQL expression.
+///
+/// Related SQLite documentation <https://www.sqlite.org/json1.html>.
 public struct SQLJSON {
     private enum Impl {
         /// A JSON object that comes directly from the result of another
@@ -198,12 +224,12 @@ extension SQLJSON: SQLJSONExpressible {
     }
     
     // SQLite 3.38.0
-    public subscript(valueAtPath path: some SQLExpressible) -> SQLExpression {
+    public subscript(_ path: some SQLExpressible) -> SQLExpression {
         .binary(.jsonSubcomponentValue, unparsedJSON, path.sqlExpression)
     }
     
     // SQLite 3.38.0
-    public subscript(_ path: some SQLExpressible) -> SQLJSON {
+    public subscript(jsonAtPath path: some SQLExpressible) -> SQLJSON {
         .jsonObject(.binary(.jsonSubcomponent, unparsedJSON, path.sqlExpression))
     }
     

@@ -122,9 +122,9 @@ final class JSONFunctionTests: GRDBTestCase {
         
         let dbQueue = try makeDatabaseQueue()
         try dbQueue.inDatabase { db in
-            try assert(db, "[1,[2,3],4]".sqlJSON["$"].count, equal: 3)
-            try assert(db, "[1,[2,3],4]".sqlJSON["$[1]"].count, equal: 2)
-            try assert(db, "[1,[2,3],4]".sqlJSON["$[2]"].count, equal: 0)
+            try assert(db, "[1,[2,3],4]".sqlJSON[jsonAtPath: "$"].count, equal: 3)
+            try assert(db, "[1,[2,3],4]".sqlJSON[jsonAtPath: "$[1]"].count, equal: 2)
+            try assert(db, "[1,[2,3],4]".sqlJSON[jsonAtPath: "$[2]"].count, equal: 0)
         }
     }
     
@@ -198,13 +198,13 @@ final class JSONFunctionTests: GRDBTestCase {
             do {
                 // Test JSON value extraction
                 do {
-                    let expression = column.sqlJSON[valueAtPath: 0]
+                    let expression = column.sqlJSON[0]
                     let value = try table.select(expression, as: Int.self).fetchOne(db)
                     XCTAssertEqual(value, 1)
                     XCTAssertEqual(lastSQLQuery, #"SELECT "value" ->> 0 FROM "t" LIMIT 1"#)
                 }
                 do {
-                    let expression = jsonColumn[valueAtPath: 0]
+                    let expression = jsonColumn[0]
                     let value = try table.select(expression, as: Int.self).fetchOne(db)
                     XCTAssertEqual(value, 1)
                     XCTAssertEqual(lastSQLQuery, #"SELECT "value" ->> 0 FROM "t" LIMIT 1"#)
@@ -214,13 +214,13 @@ final class JSONFunctionTests: GRDBTestCase {
             do {
                 // Test JSON extraction
                 do {
-                    let expression = column.sqlJSON[1]
+                    let expression = column.sqlJSON[jsonAtPath: 1]
                     let value = try table.select(expression, as: String.self).fetchOne(db)
                     XCTAssertEqual(value, #"{"foo":"bar"}"#)
                     XCTAssertEqual(lastSQLQuery, #"SELECT "value" -> 1 FROM "t" LIMIT 1"#)
                 }
                 do {
-                    let expression = jsonColumn[1]
+                    let expression = jsonColumn[jsonAtPath: 1]
                     let value = try table.select(expression, as: String.self).fetchOne(db)
                     XCTAssertEqual(value, #"{"foo":"bar"}"#)
                     XCTAssertEqual(lastSQLQuery, #"SELECT "value" -> 1 FROM "t" LIMIT 1"#)
@@ -230,13 +230,13 @@ final class JSONFunctionTests: GRDBTestCase {
             do {
                 // Test deep JSON extraction
                 do {
-                    let expression = column.sqlJSON[1]["foo"]
+                    let expression = column.sqlJSON[jsonAtPath: 1][jsonAtPath: "foo"]
                     let value = try table.select(expression, as: String.self).fetchOne(db)
                     XCTAssertEqual(value, #""bar""#)
                     XCTAssertEqual(lastSQLQuery, #"SELECT ("value" -> 1) -> 'foo' FROM "t" LIMIT 1"#)
                 }
                 do {
-                    let expression = jsonColumn[1]["foo"]
+                    let expression = jsonColumn[jsonAtPath: 1][jsonAtPath: "foo"]
                     let value = try table.select(expression, as: String.self).fetchOne(db)
                     XCTAssertEqual(value, #""bar""#)
                     XCTAssertEqual(lastSQLQuery, #"SELECT ("value" -> 1) -> 'foo' FROM "t" LIMIT 1"#)
@@ -265,17 +265,17 @@ final class JSONFunctionTests: GRDBTestCase {
         try makeDatabaseQueue().inDatabase { db in
             let expression = #"["[1, 2, 3]"]"#.sqlJSON
             do {
-                let value: String? = try SQLRequest("SELECT \(expression[0])").fetchOne(db)
+                let value: String? = try SQLRequest("SELECT \(expression[jsonAtPath: 0])").fetchOne(db)
                 XCTAssertEqual(value, #""[1, 2, 3]""#)
                 XCTAssertEqual(lastSQLQuery, #"SELECT '["[1, 2, 3]"]' -> 0"#)
             }
             do {
-                let value: String? = try SQLRequest("SELECT \(expression[0][0])").fetchOne(db)
+                let value: String? = try SQLRequest("SELECT \(expression[jsonAtPath: 0][jsonAtPath: 0])").fetchOne(db)
                 XCTAssertNil(value)
                 XCTAssertEqual(lastSQLQuery, #"SELECT ('["[1, 2, 3]"]' -> 0) -> 0"#)
             }
             do {
-                let value: Int? = try SQLRequest("SELECT \(expression[valueAtPath: 0].sqlJSON[0])").fetchOne(db)
+                let value: Int? = try SQLRequest("SELECT \(expression[0].sqlJSON[jsonAtPath: 0])").fetchOne(db)
                 XCTAssertEqual(value, 1)
                 XCTAssertEqual(lastSQLQuery, #"SELECT ('["[1, 2, 3]"]' ->> 0) -> 0"#)
             }
@@ -299,6 +299,19 @@ final class JSONFunctionTests: GRDBTestCase {
             try assert(db, input.sqlJSON.extract(["$.c[2].f"]), equal: 7)
             try assert(db, input.sqlJSON.extract(["$.x"]), equal: DatabaseValue.null)
             try assert(db, input.sqlJSON.extract(["$.x", "$.a"]), equal: "[null,2]")
+        }
+    }
+    
+    func test_index_on_json_key() throws {
+        let dbQueue = try makeDatabaseQueue()
+        try dbQueue.inDatabase { db in
+            try db.create(table: "test") { t in
+                t.column("json", .jsonText)
+            }
+            try db.create(index: "index_test", on: "test", expressions: [JSONColumn("json")["name"]])
+            XCTAssertEqual(lastSQLQuery, """
+                CREATE INDEX "index_test" ON "test"("json" ->> 'name')
+                """)
         }
     }
 }
