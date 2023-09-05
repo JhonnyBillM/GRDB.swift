@@ -1737,10 +1737,10 @@ extension SQLExpression {
 ///
 /// - ``SQLExpression``
 public protocol SQLExpressible {
-    /// Returns an SQL expression.
+    /// An SQL expression.
     var sqlExpression: SQLExpression { get }
     
-    /// Returns an SQL expression that evaluates to a JSON object.
+    /// An SQL expression that evaluates to a JSON object.
     var sqlJSON: SQLJSON { get }
 }
 
@@ -1781,6 +1781,8 @@ extension SQLExpressible where Self == Column {
 /// - ``count(_:)``
 /// - ``count(distinct:)``
 /// - ``dateTime(_:_:)``
+/// - ``isValidJSON``
+/// - ``isValidJSON5``
 /// - ``julianDay(_:_:)``
 /// - ``length(_:)-41me0``
 /// - ``like(_:escape:)``

@@ -306,8 +306,11 @@ final class JSONFunctionTests: GRDBTestCase {
         let dbQueue = try makeDatabaseQueue()
         try dbQueue.inDatabase { db in
             try db.create(table: "test") { t in
-                t.column("json", .jsonText)
+                t.column("json", .jsonText).check { $0.isValidJSON }
             }
+            XCTAssertEqual(lastSQLQuery, """
+                CREATE TABLE "test" ("json" TEXT CHECK (JSON_VALID("json")))
+                """)
             try db.create(index: "index_test", on: "test", expressions: [JSONColumn("json")["name"]])
             XCTAssertEqual(lastSQLQuery, """
                 CREATE INDEX "index_test" ON "test"("json" ->> 'name')

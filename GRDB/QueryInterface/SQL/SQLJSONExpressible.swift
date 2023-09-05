@@ -40,8 +40,8 @@ public protocol SQLJSONExpressible: SQLSpecificExpressible {
     var count: SQLExpression { get }
     
     // SQLite 3.38.0
-    /// Returns an SQL representation of the selected subcomponent,
-    /// extracted with the `->>` SQL operator.
+    /// Returns the selected subcomponent as an SQL value, extracted with
+    /// the `->>` SQL operator.
     ///
     /// For example:
     ///
@@ -59,8 +59,8 @@ public protocol SQLJSONExpressible: SQLSpecificExpressible {
     subscript(_ path: some SQLExpressible) -> SQLExpression { get }
     
     // SQLite 3.38.0
-    /// Returns a JSON representation of the selected subcomponent,
-    /// extracted with the `->` SQL operator.
+    /// Returns the selected subcomponent as a JSON object, extracted with
+    /// the `->` SQL operator.
     ///
     /// For example:
     ///
@@ -77,8 +77,8 @@ public protocol SQLJSONExpressible: SQLSpecificExpressible {
     /// Related SQLite documentation <https://www.sqlite.org/json1.html#the_and_operators>
     subscript(jsonAtPath path: some SQLExpressible) -> SQLJSON { get }
     
-    /// Returns an SQL or JSON representation of the selected subcomponent,
-    /// extracted with the `JSON_EXTRACT` SQL function.
+    /// Returns the selected subcomponent as an SQL or JSON value, extracted
+    /// with the `JSON_EXTRACT` SQL function.
     ///
     /// Provided you are sure that the extracted value is valid JSON, you'll
     /// need to use the ``SQLExpressible/sqlJSON`` property on the result in
@@ -261,11 +261,19 @@ extension Collection where Element: SQLExpressible {
 // MARK: - SQLSpecificExpressible Extension
 
 extension SQLSpecificExpressible {
+    /// An SQL expression that is true if the expression is valid JSON,
+    /// evaluated with the `JSON_VALID` SQL function.
+    ///
+    /// Related SQLite documentation <https://www.sqlite.org/json1.html#the_json_valid_function>.
     public var isValidJSON: SQLExpression {
         .function("JSON_VALID", [sqlExpression])
     }
     
     // SQLite 3.42.0+
+    /// An SQL expression that is true if the expression is valid JSON or
+    /// JSON5, evaluated with the `JSON_ERROR_POSITION` SQL function.
+    ///
+    /// Related SQLite documentation <https://www.sqlite.org/json1.html#the_json_valid_function>.
     public var isValidJSON5: SQLExpression {
         SQLExpression.function("JSON_ERROR_POSITION", [sqlExpression]) == 0
     }
